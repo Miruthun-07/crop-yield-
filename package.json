@@ -1,0 +1,16 @@
+{
+  "name": "intelligent-crop-yield-backend",
+  "version": "1.0.0",
+  "description": "Local backend for Intelligent Crop Yield Forecasting dashboard",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.22.3"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}

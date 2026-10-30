@@ -1,0 +1,935 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Intelligent Crop Yield Forecasting and Agricultural Decision Support System — Predict Smarter. Grow Better. Harvest More." />
+  <title>Intelligent Crop Yield — Predict Smarter. Grow Better. Harvest More.</title>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&display=swap" rel="stylesheet">
+
+  <!-- Lucide icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+  <link rel="stylesheet" href="style.css" />
+
+  <!-- ============================================================
+       Bug fix: force [hidden] attribute to override display:flex/block
+       Without this, the prediction loading overlay (display:flex in style.css)
+       stays visible after JS sets hidden=true, making the result look blank.
+       ============================================================ -->
+  <style>
+    [hidden] { display: none !important; }
+  </style>
+</head>
+<body>
+  <!-- =================================================================
+       App Shell
+       ================================================================= -->
+  <div class="app-shell">
+
+    <!-- =================================================================
+         Sidebar
+         ================================================================= -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-brand">
+        <div class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 32 32" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 22 C12 14, 16 10, 24 8 C24 16, 20 20, 12 22 Z"/>
+            <path d="M12 22 C12 18, 8 14, 4 14 C4 20, 8 22, 12 22 Z"/>
+            <path d="M12 22 L12 28"/>
+          </svg>
+        </div>
+        <div class="brand-text">
+          <span class="brand-title">Intelligent Crop Yield</span>
+          <span class="brand-tag">Predict · Grow · Harvest</span>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav" aria-label="Main navigation">
+        <button class="nav-item active" data-section="dashboard">
+          <i data-lucide="layout-dashboard"></i><span>Dashboard</span>
+        </button>
+        <button class="nav-item" data-section="predict">
+          <i data-lucide="sprout"></i><span>Yield Prediction</span>
+        </button>
+        <button class="nav-item" data-section="models">
+          <i data-lucide="flask-conical"></i><span>Model Lab</span>
+        </button>
+        <button class="nav-item" data-section="simulator">
+          <i data-lucide="sliders-horizontal"></i><span>Scenario Simulator</span>
+        </button>
+        <button class="nav-item" data-section="xai">
+          <i data-lucide="brain-circuit"></i><span>Explainable AI</span>
+        </button>
+        <button class="nav-item" data-section="regional">
+          <i data-lucide="map"></i><span>Regional Analytics</span>
+        </button>
+        <button class="nav-item" data-section="history">
+          <i data-lucide="history"></i><span>Prediction History</span>
+        </button>
+        <button class="nav-item" data-section="recommendations">
+          <i data-lucide="lightbulb"></i><span>Recommendations</span>
+        </button>
+        <button class="nav-item" data-section="about">
+          <i data-lucide="info"></i><span>About Project</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="firebase-status" id="firebase-status">
+          <span class="status-dot"></span>
+          <span class="status-text">Checking backend…</span>
+        </div>
+        <p class="sidebar-tagline">“Predict Smarter. Grow Better. Harvest More.”</p>
+      </div>
+    </aside>
+
+    <!-- mobile overlay -->
+    <div class="sidebar-overlay" id="sidebar-overlay" aria-hidden="true"></div>
+
+    <!-- =================================================================
+         Main panel
+         ================================================================= -->
+    <main class="main-panel" id="main-panel">
+
+      <!-- Topbar -->
+      <header class="topbar">
+        <button class="icon-btn mobile-only" id="menu-toggle" aria-label="Open menu">
+          <i data-lucide="menu"></i>
+        </button>
+        <div class="topbar-title">
+          <h1 id="page-title">Dashboard</h1>
+          <p id="page-subtitle">A live snapshot of your forecasting activity.</p>
+        </div>
+        <div class="topbar-actions">
+          <div class="search-box desktop-only">
+            <i data-lucide="search"></i>
+            <input type="search" id="global-search" placeholder="Search crop or district…" aria-label="Global search" />
+          </div>
+          <button class="icon-btn" id="quick-predict" title="Quick prediction">
+            <i data-lucide="zap"></i><span class="btn-label">Quick Predict</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- Toast container -->
+      <div class="toast-container" id="toast-container" aria-live="polite" aria-atomic="true"></div>
+
+      <!-- Section container -->
+      <div class="section-container" id="section-container">
+
+        <!-- ============================================================
+             DASHBOARD
+             ============================================================ -->
+        <section class="page-section active" id="section-dashboard" aria-label="Dashboard">
+          <!-- Backend status banner -->
+          <div class="banner" id="firebase-banner">
+            <i data-lucide="cloud-off"></i>
+            <span>Checking backend connection…</span>
+          </div>
+
+          <!-- KPI grid -->
+          <div class="kpi-grid">
+            <div class="kpi-card">
+              <div class="kpi-icon" style="--accent:#1F6F43;"><i data-lucide="database"></i></div>
+              <div class="kpi-body">
+                <span class="kpi-label">Total Predictions</span>
+                <span class="kpi-value" id="kpi-total-predictions">0</span>
+                <span class="kpi-sub" id="kpi-total-predictions-sub">Loading…</span>
+              </div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-icon" style="--accent:#B7E36B;"><i data-lucide="trending-up"></i></div>
+              <div class="kpi-body">
+                <span class="kpi-label">Avg Predicted Yield</span>
+                <span class="kpi-value" id="kpi-avg-yield">—</span>
+                <span class="kpi-sub">tonnes / hectare</span>
+              </div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-icon" style="--accent:#1F6F43;"><i data-lucide="wheat"></i></div>
+              <div class="kpi-body">
+                <span class="kpi-label">Crops Analysed</span>
+                <span class="kpi-value" id="kpi-crops">0</span>
+                <span class="kpi-sub">distinct crop types</span>
+              </div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-icon" style="--accent:#B7E36B;"><i data-lucide="award"></i></div>
+              <div class="kpi-body">
+                <span class="kpi-label">Most Analysed Crop</span>
+                <span class="kpi-value" id="kpi-top-crop">—</span>
+                <span class="kpi-sub" id="kpi-top-crop-sub">across all records</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Charts grid -->
+          <div class="charts-grid">
+            <div class="chart-card span-2">
+              <div class="chart-head">
+                <div>
+                  <h3>Crop-wise Yield Comparison</h3>
+                  <p>Average predicted yield per crop (tonnes/ha) — from saved & demo records.</p>
+                </div>
+                <span class="pill" id="pill-crop-data">demo data</span>
+              </div>
+              <div class="chart-body"><canvas id="chart-crop-compare"></canvas></div>
+            </div>
+
+            <div class="chart-card">
+              <div class="chart-head">
+                <div>
+                  <h3>Seasonal Yield Trends</h3>
+                  <p>Average yield by season.</p>
+                </div>
+              </div>
+              <div class="chart-body"><canvas id="chart-season-trend"></canvas></div>
+            </div>
+
+            <div class="chart-card">
+              <div class="chart-head">
+                <div>
+                  <h3>Rainfall vs Yield</h3>
+                  <p>Illustrative relationship.</p>
+                </div>
+              </div>
+              <div class="chart-body"><canvas id="chart-rainfall-yield"></canvas></div>
+            </div>
+
+            <div class="chart-card span-2">
+              <div class="chart-head">
+                <div>
+                  <h3>Recent Prediction History</h3>
+                  <p>Latest 10 predictions saved to Firebase.</p>
+                </div>
+                <button class="btn btn-ghost btn-sm" id="btn-view-history">View all</button>
+              </div>
+              <div class="chart-body table-wrap">
+                <table class="data-table" id="recent-predictions-table">
+                  <thead>
+                    <tr><th>Crop</th><th>State</th><th>Season</th><th>Yield (t/ha)</th><th>Production (t)</th><th>Source</th><th>Saved</th></tr>
+                  </thead>
+                  <tbody id="recent-predictions-body">
+                    <tr class="empty-row"><td colspan="7">Loading recent predictions…</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="chart-card span-2">
+              <div class="chart-head">
+                <div>
+                  <h3>Quick Prediction</h3>
+                  <p>Jump to the prediction form to forecast a new yield.</p>
+                </div>
+              </div>
+              <div class="chart-body quick-action">
+                <p>Open the prediction form to forecast yield for any of 12 crops, 30 states, and 4 seasons, with full soil, nutrient, rainfall, and irrigation inputs.</p>
+                <button class="btn btn-primary" id="btn-quick-predict">
+                  <i data-lucide="zap"></i> Open Yield Prediction
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ============================================================
+             YIELD PREDICTION
+             ============================================================ -->
+        <section class="page-section" id="section-predict" aria-label="Yield Prediction">
+          <div class="banner info">
+            <i data-lucide="info"></i>
+            <span>This page uses a <strong>transparent deterministic demo estimation algorithm</strong> grounded in 19,689 historical crop records. It is <em>not</em> a trained ML model and is clearly labelled as “Demo Estimate”.</span>
+          </div>
+
+          <div class="predict-grid">
+            <!-- Form -->
+            <div class="card">
+              <div class="card-head">
+                <h3><i data-lucide="sprout"></i> Prediction Inputs</h3>
+                <span class="pill">12 crops · 30 states</span>
+              </div>
+              <form id="predict-form" class="predict-form" novalidate>
+                <div class="form-row">
+                  <label for="f-crop">Crop
+                    <select id="f-crop" required>
+                      <option value="">Select crop…</option>
+                    </select>
+                    <span class="field-error" data-for="f-crop"></span>
+                  </label>
+
+                  <label for="f-state">State
+                    <select id="f-state" required>
+                      <option value="">Select state…</option>
+                    </select>
+                    <span class="field-error" data-for="f-state"></span>
+                  </label>
+
+                  <label for="f-district">District
+                    <input type="text" id="f-district" placeholder="e.g. Ludhiana" required />
+                    <span class="field-error" data-for="f-district"></span>
+                  </label>
+
+                  <label for="f-season">Season
+                    <select id="f-season" required>
+                      <option value="">Select season…</option>
+                      <option value="Kharif">Kharif</option>
+                      <option value="Rabi">Rabi</option>
+                      <option value="Zaid">Zaid</option>
+                      <option value="Perennial">Perennial (Whole Year)</option>
+                    </select>
+                    <span class="field-error" data-for="f-season"></span>
+                  </label>
+
+                  <label for="f-year">Year
+                    <input type="number" id="f-year" min="1997" max="2030" placeholder="e.g. 2024" required />
+                    <span class="field-error" data-for="f-year"></span>
+                  </label>
+
+                  <label for="f-soil">Soil Type
+                    <select id="f-soil" required>
+                      <option value="">Select soil…</option>
+                      <option value="Alluvial">Alluvial</option>
+                      <option value="Black">Black (Regur)</option>
+                      <option value="Red">Red</option>
+                      <option value="Laterite">Laterite</option>
+                      <option value="Arid">Arid / Desert</option>
+                      <option value="Mountain">Mountain</option>
+                      <option value="Sandy">Sandy</option>
+                      <option value="Clay">Clay</option>
+                      <option value="Loamy">Loamy</option>
+                    </select>
+                    <span class="field-error" data-for="f-soil"></span>
+                  </label>
+
+                  <label for="f-ph">Soil pH <small>(0–14)</small>
+                    <input type="number" id="f-ph" min="0" max="14" step="0.1" placeholder="e.g. 6.5" required />
+                    <span class="field-error" data-for="f-ph"></span>
+                  </label>
+
+                  <label for="f-n">Nitrogen (kg/ha)
+                    <input type="number" id="f-n" min="0" max="500" step="0.1" placeholder="e.g. 120" required />
+                    <span class="field-error" data-for="f-n"></span>
+                  </label>
+
+                  <label for="f-p">Phosphorus (kg/ha)
+                    <input type="number" id="f-p" min="0" max="500" step="0.1" placeholder="e.g. 60" required />
+                    <span class="field-error" data-for="f-p"></span>
+                  </label>
+
+                  <label for="f-k">Potassium (kg/ha)
+                    <input type="number" id="f-k" min="0" max="500" step="0.1" placeholder="e.g. 40" required />
+                    <span class="field-error" data-for="f-k"></span>
+                  </label>
+
+                  <label for="f-rainfall">Rainfall (mm)
+                    <input type="number" id="f-rainfall" min="0" max="5000" step="1" placeholder="e.g. 1100" required />
+                    <span class="field-error" data-for="f-rainfall"></span>
+                  </label>
+
+                  <label for="f-temp">Temperature (°C)
+                    <input type="number" id="f-temp" min="-10" max="55" step="0.1" placeholder="e.g. 27" required />
+                    <span class="field-error" data-for="f-temp"></span>
+                  </label>
+
+                  <label for="f-humidity">Humidity (%)
+                    <input type="number" id="f-humidity" min="0" max="100" step="1" placeholder="e.g. 70" required />
+                    <span class="field-error" data-for="f-humidity"></span>
+                  </label>
+
+                  <label for="f-irrigation">Irrigation Type
+                    <select id="f-irrigation" required>
+                      <option value="">Select irrigation…</option>
+                      <option value="Rainfed">Rainfed</option>
+                      <option value="Drip">Drip</option>
+                      <option value="Sprinkler">Sprinkler</option>
+                      <option value="Flood">Flood / Canal</option>
+                      <option value="Furrow">Furrow</option>
+                    </select>
+                    <span class="field-error" data-for="f-irrigation"></span>
+                  </label>
+
+                  <label for="f-area">Farm Area (hectares)
+                    <input type="number" id="f-area" min="0.1" max="100000" step="0.01" placeholder="e.g. 2.5" required />
+                    <span class="field-error" data-for="f-area"></span>
+                  </label>
+                </div>
+
+                <div class="form-actions">
+                  <button type="reset" class="btn btn-ghost"><i data-lucide="rotate-ccw"></i> Reset</button>
+                  <button type="submit" class="btn btn-primary" id="btn-predict">
+                    <i data-lucide="zap"></i> Predict Yield
+                  </button>
+                </div>
+              </form>
+            </div>
+
+            <!-- Result -->
+            <div class="card">
+              <div class="card-head">
+                <h3><i data-lucide="target"></i> Prediction Result</h3>
+                <span class="pill pill-demo" id="result-pill">Demo Estimate</span>
+              </div>
+
+              <div class="predict-result" id="predict-result">
+                <div class="empty-state" id="predict-empty">
+                  <i data-lucide="search"></i>
+                  <h4>No prediction yet</h4>
+                  <p>Fill in the form and click <strong>Predict Yield</strong> to see estimated yield, total production, environmental suitability, influencing factors, and recommendations.</p>
+                </div>
+
+                <div class="result-content" id="predict-content" hidden>
+                  <!-- big headline number -->
+                  <div class="result-hero">
+                    <div>
+                      <span class="result-label">Predicted Yield</span>
+                      <span class="result-big" id="r-yield">—</span>
+                      <span class="result-unit">tonnes per hectare</span>
+                    </div>
+                    <div class="result-side">
+                      <span class="result-label">Total Production</span>
+                      <span class="result-mid" id="r-production">—</span>
+                      <span class="result-unit">tonnes</span>
+                      <span class="result-formula" id="r-formula">yield × farm area</span>
+                    </div>
+                  </div>
+
+                  <div class="result-tags">
+                    <div class="tag-block">
+                      <span class="tag-label">Yield Category</span>
+                      <span class="tag-value" id="r-category">—</span>
+                    </div>
+                    <div class="tag-block">
+                      <span class="tag-label">Estimation Method</span>
+                      <span class="tag-value" id="r-method">—</span>
+                    </div>
+                    <div class="tag-block">
+                      <span class="tag-label">Environmental Suitability</span>
+                      <span class="tag-value" id="r-suitability">—</span>
+                    </div>
+                    <div class="tag-block">
+                      <span class="tag-label">Timestamp</span>
+                      <span class="tag-value" id="r-timestamp">—</span>
+                    </div>
+                  </div>
+
+                  <div class="result-block">
+                    <h5><i data-lucide="line-chart"></i> Factors Influencing the Estimate</h5>
+                    <ul class="factor-list" id="r-factors"></ul>
+                  </div>
+
+                  <div class="result-block">
+                    <h5><i data-lucide="lightbulb"></i> Practical Agricultural Recommendations</h5>
+                    <ul class="recommend-list" id="r-recommendations"></ul>
+                  </div>
+
+                  <div class="result-actions">
+                    <button class="btn btn-primary" id="btn-save-prediction">
+                      <i data-lucide="save"></i> Save Prediction
+                    </button>
+                    <button class="btn btn-ghost" id="btn-redo-prediction">
+                      <i data-lucide="refresh-cw"></i> New Prediction
+                    </button>
+                  </div>
+                </div>
+
+                <!-- loading overlay -->
+                <div class="loading-overlay" id="predict-loading" hidden>
+                  <div class="spinner"></div>
+                  <p>Computing demo estimate…</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ============================================================
+             MODEL LAB
+             ============================================================ -->
+        <section class="page-section" id="section-models" aria-label="Model Lab">
+          <div class="banner info">
+            <i data-lucide="flask-conical"></i>
+            <span>These are reference explanations of common ML regressors used in crop yield forecasting. <strong>Evaluation metrics are unavailable</strong> because no trained model is connected to this front-end demo.</span>
+          </div>
+
+          <div class="card span-2">
+            <div class="card-head">
+              <h3><i data-lucide="table"></i> Model Comparison Table</h3>
+              <span class="pill pill-demo">Evaluation unavailable</span>
+            </div>
+            <div class="table-wrap">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Model</th>
+                    <th>MAE</th>
+                    <th>RMSE</th>
+                    <th>R²</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="model-comparison-body">
+                  <tr><td>Linear Regression</td><td>—</td><td>—</td><td>—</td><td><span class="badge badge-warn">Not connected</span></td></tr>
+                  <tr><td>Random Forest Regressor</td><td>—</td><td>—</td><td>—</td><td><span class="badge badge-warn">Not connected</span></td></tr>
+                  <tr><td>Gradient Boosting Regressor</td><td>—</td><td>—</td><td>—</td><td><span class="badge badge-warn">Not connected</span></td></tr>
+                  <tr><td>XGBoost Regressor</td><td>—</td><td>—</td><td>—</td><td><span class="badge badge-warn">Not connected</span></td></tr>
+                </tbody>
+              </table>
+            </div>
+            <p class="muted-note">“Evaluation unavailable — trained models not connected” is shown until genuine evaluation results from a trained model backend are supplied. No fake accuracy scores are displayed.</p>
+          </div>
+
+          <div class="models-grid">
+            <div class="card model-card">
+              <div class="model-icon"><i data-lucide="git-commit-horizontal"></i></div>
+              <h4>Linear Regression</h4>
+              <p class="model-tagline">A simple weighted-sum baseline.</p>
+              <p><strong>How it works:</strong> Fits a straight-line equation <code>y = β₀ + β₁x₁ + … + βₙxₙ</code> that minimises the squared error between predicted and actual yield.</p>
+              <p><strong>Advantages:</strong> Highly interpretable, fast to train, easy to debug, and provides a strong baseline.</p>
+              <p><strong>Limitations:</strong> Cannot model non-linear relationships (e.g. rainfall saturation) without feature engineering; sensitive to outliers and multicollinearity.</p>
+            </div>
+
+            <div class="card model-card">
+              <div class="model-icon"><i data-lucide="trees"></i></div>
+              <h4>Random Forest Regressor</h4>
+              <p class="model-tagline">Ensemble of decorrelated decision trees.</p>
+              <p><strong>How it works:</strong> Trains many decision trees on bootstrapped samples and averages their predictions to reduce variance.</p>
+              <p><strong>Advantages:</strong> Captures non-linearities and interactions, robust to outliers, requires minimal preprocessing, offers feature importance.</p>
+              <p><strong>Limitations:</strong> Larger memory footprint, slower inference than a single tree, less interpretable than linear models, can overfit noisy data.</p>
+            </div>
+
+            <div class="card model-card">
+              <div class="model-icon"><i data-lucide="trending-up"></i></div>
+              <h4>Gradient Boosting Regressor</h4>
+              <p class="model-tagline">Sequential error-correcting trees.</p>
+              <p><strong>How it works:</strong> Builds trees one at a time, each new tree correcting the residual errors of the combined ensemble so far.</p>
+              <p><strong>Advantages:</strong> Strong predictive accuracy on tabular data, handles mixed feature types, supports custom loss functions.</p>
+              <p><strong>Limitations:</strong> Sensitive to hyper-parameters (learning rate, depth, n_estimators), prone to overfitting without regularisation, slower to train.</p>
+            </div>
+
+            <div class="card model-card">
+              <div class="model-icon"><i data-lucide="zap"></i></div>
+              <h4>XGBoost Regressor</h4>
+              <p class="model-tagline">Regularised gradient boosting.</p>
+              <p><strong>How it works:</strong> A highly optimised implementation of gradient boosting with regularisation, missing-value handling, and parallel tree construction.</p>
+              <p><strong>Advantages:</strong> State-of-the-art on many tabular benchmarks, handles missing data natively, supports early stopping and GPU acceleration.</p>
+              <p><strong>Limitations:</strong> Complex parameter space, less interpretable, can be brittle to distribution shift if retraining is not done carefully.</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- ============================================================
+             SCENARIO SIMULATOR
+             ============================================================ -->
+        <section class="page-section" id="section-simulator" aria-label="Scenario Simulator">
+          <div class="banner info">
+            <i data-lucide="sliders-horizontal"></i>
+            <span>Adjust rainfall ±50% and temperature ±5°C to compare baseline vs modified scenarios. Estimates are <strong>illustrative</strong> and computed using the same demo algorithm.</span>
+          </div>
+
+          <div class="card">
+            <div class="card-head">
+              <h3><i data-lucide="settings-2"></i> Base Scenario Inputs</h3>
+            </div>
+            <div class="form-row">
+              <label for="s-crop">Crop
+                <select id="s-crop"><option value="">Select crop…</option></select>
+              </label>
+              <label for="s-state">State
+                <select id="s-state"><option value="">Select state…</option></select>
+              </label>
+              <label for="s-season">Season
+                <select id="s-season">
+                  <option value="Kharif">Kharif</option>
+                  <option value="Rabi">Rabi</option>
+                  <option value="Zaid">Zaid</option>
+                  <option value="Perennial">Perennial (Whole Year)</option>
+                </select>
+              </label>
+              <label for="s-rainfall">Baseline Rainfall (mm)
+                <input type="number" id="s-rainfall" min="0" max="5000" value="1100" />
+              </label>
+              <label for="s-temp">Baseline Temperature (°C)
+                <input type="number" id="s-temp" min="-10" max="55" value="27" />
+              </label>
+              <label for="s-ph">Soil pH
+                <input type="number" id="s-ph" min="0" max="14" step="0.1" value="6.5" />
+              </label>
+              <label for="s-area">Farm Area (ha)
+                <input type="number" id="s-area" min="0.1" value="2" />
+              </label>
+            </div>
+          </div>
+
+          <div class="sim-grid">
+            <div class="card">
+              <div class="card-head">
+                <h3><i data-lucide="cloud-rain"></i> Rainfall Adjustment</h3>
+                <span class="pill" id="rainfall-pill">±0%</span>
+              </div>
+              <div class="slider-block">
+                <input type="range" id="rainfall-slider" min="-50" max="50" step="1" value="0" />
+                <div class="slider-readout">
+                  <span>Baseline: <strong id="s-rain-base">1100</strong> mm</span>
+                  <span>Modified: <strong id="s-rain-mod">1100</strong> mm</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-head">
+                <h3><i data-lucide="thermometer"></i> Temperature Adjustment</h3>
+                <span class="pill" id="temp-pill">±0°C</span>
+              </div>
+              <div class="slider-block">
+                <input type="range" id="temp-slider" min="-5" max="5" step="0.5" value="0" />
+                <div class="slider-readout">
+                  <span>Baseline: <strong id="s-temp-base">27</strong> °C</span>
+                  <span>Modified: <strong id="s-temp-mod">27</strong> °C</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card span-2">
+            <div class="card-head">
+              <h3><i data-lucide="git-compare"></i> Baseline vs Modified Scenario</h3>
+              <span class="pill pill-demo">Illustrative estimate</span>
+            </div>
+            <div class="sim-compare">
+              <div class="sim-col sim-baseline">
+                <span class="sim-label">Baseline</span>
+                <span class="sim-num" id="sim-baseline-yield">—</span>
+                <span class="sim-unit">tonnes / ha</span>
+                <span class="sim-prod" id="sim-baseline-prod">—</span>
+              </div>
+              <div class="sim-arrow">
+                <i data-lucide="arrow-right"></i>
+                <span class="sim-delta" id="sim-delta">0.0%</span>
+              </div>
+              <div class="sim-col sim-modified">
+                <span class="sim-label">Modified</span>
+                <span class="sim-num" id="sim-modified-yield">—</span>
+                <span class="sim-unit">tonnes / ha</span>
+                <span class="sim-prod" id="sim-modified-prod">—</span>
+              </div>
+            </div>
+            <div class="chart-body"><canvas id="chart-scenario"></canvas></div>
+            <div class="form-actions">
+              <button class="btn btn-primary" id="btn-save-scenario">
+                <i data-lucide="save"></i> Save Scenario
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <!-- ============================================================
+             EXPLAINABLE AI
+             ============================================================ -->
+        <section class="page-section" id="section-xai" aria-label="Explainable AI">
+          <div class="banner info">
+            <i data-lucide="brain-circuit"></i>
+            <span>These are <strong>illustrative heuristic influences</strong> drawn from agronomic domain knowledge. They are <em>not</em> SHAP values or trained-model feature importances.</span>
+          </div>
+
+          <div class="card span-2">
+            <div class="card-head">
+              <h3><i data-lucide="bar-chart-3"></i> Input Factor Importance (Illustrative)</h3>
+              <span class="pill pill-demo">Heuristic influences</span>
+            </div>
+            <div class="chart-body"><canvas id="chart-xai-importance"></canvas></div>
+          </div>
+
+          <div class="xai-grid">
+            <div class="card xai-card">
+              <div class="xai-icon" style="--accent:#1F6F43;"><i data-lucide="cloud-rain"></i></div>
+              <h4>Rainfall Influence</h4>
+              <p>Rainfall drives yield up to a crop-specific optimum (e.g. rice ~1200–2000 mm, millet ~400–700 mm). Beyond saturation, additional rainfall harms yield through waterlogging and nutrient leaching.</p>
+            </div>
+            <div class="card xai-card">
+              <div class="xai-icon" style="--accent:#B7E36B;"><i data-lucide="thermometer"></i></div>
+              <h4>Temperature Influence</h4>
+              <p>Most crops thrive in 20–30°C. Below 15°C slows metabolism; above 35°C causes heat stress and pollen damage. Perennial plantations tolerate wider ranges than cereals.</p>
+            </div>
+            <div class="card xai-card">
+              <div class="xai-icon" style="--accent:#1F6F43;"><i data-lucide="droplets"></i></div>
+              <h4>Soil pH Influence</h4>
+              <p>Optimal pH is 6.0–7.0 for most crops. Strongly acidic (&lt;5.5) or alkaline (&gt;8.5) soils lock up nutrients and reduce microbial activity.</p>
+            </div>
+            <div class="card xai-card">
+              <div class="xai-icon" style="--accent:#B7E36B;"><i data-lucide="leaf"></i></div>
+              <h4>Nutrient Influence</h4>
+              <p>Nitrogen drives vegetative growth, phosphorus supports rooting and flowering, and potassium improves stress tolerance. Balanced NPK gives a multiplicative boost.</p>
+            </div>
+            <div class="card xai-card">
+              <div class="xai-icon" style="--accent:#1F6F43;"><i data-lucide="waves"></i></div>
+              <h4>Irrigation Influence</h4>
+              <p>Drip and sprinkler systems deliver water efficiently and boost yield; rainfed farming is more variable; flood irrigation can waterlog sensitive crops.</p>
+            </div>
+            <div class="card xai-card">
+              <div class="xai-icon" style="--accent:#B7E36B;"><i data-lucide="wind"></i></div>
+              <h4>Humidity Influence</h4>
+              <p>60–80% humidity supports healthy transpiration. Excessively high humidity increases fungal disease pressure; very low humidity stresses plants.</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- ============================================================
+             REGIONAL ANALYTICS
+             ============================================================ -->
+        <section class="page-section" id="section-regional" aria-label="Regional Analytics">
+          <div class="banner info">
+            <i data-lucide="map"></i>
+            <span>Filters apply to your <strong>saved Firebase records</strong> when available; otherwise to the embedded <strong>labelled sample dataset</strong> derived from 19,689 historical records. No official agricultural statistics are invented.</span>
+          </div>
+
+          <div class="card filter-card">
+            <div class="form-row">
+              <label for="ra-state">State
+                <select id="ra-state"><option value="">All states</option></select>
+              </label>
+              <label for="ra-district">District
+                <input type="text" id="ra-district" placeholder="Any district" />
+              </label>
+              <label for="ra-crop">Crop
+                <select id="ra-crop"><option value="">All crops</option></select>
+              </label>
+              <label for="ra-season">Season
+                <select id="ra-season">
+                  <option value="">All seasons</option>
+                  <option value="Kharif">Kharif</option>
+                  <option value="Rabi">Rabi</option>
+                  <option value="Zaid">Zaid</option>
+                  <option value="Whole Year">Whole Year</option>
+                  <option value="Autumn">Autumn</option>
+                  <option value="Summer">Summer</option>
+                  <option value="Winter">Winter</option>
+                </select>
+              </label>
+              <label for="ra-year">Year
+                <select id="ra-year"><option value="">All years</option></select>
+              </label>
+              <div class="filter-actions">
+                <button class="btn btn-primary" id="btn-apply-filter"><i data-lucide="filter"></i> Apply</button>
+                <button class="btn btn-ghost" id="btn-reset-filter"><i data-lucide="x"></i> Reset</button>
+                <button class="btn btn-secondary" id="btn-export-csv"><i data-lucide="download"></i> Export CSV</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="charts-grid">
+            <div class="chart-card span-2">
+              <div class="chart-head"><div><h3>Regional Comparison</h3><p>Average yield per state (filtered).</p></div></div>
+              <div class="chart-body"><canvas id="chart-regional-compare"></canvas></div>
+            </div>
+            <div class="chart-card">
+              <div class="chart-head"><div><h3>Seasonal Trends</h3><p>Yield by season (filtered).</p></div></div>
+              <div class="chart-body"><canvas id="chart-regional-season"></canvas></div>
+            </div>
+            <div class="chart-card">
+              <div class="chart-head"><div><h3>Crop Comparison</h3><p>Yield by crop (filtered).</p></div></div>
+              <div class="chart-body"><canvas id="chart-regional-crop"></canvas></div>
+            </div>
+            <div class="chart-card span-2">
+              <div class="chart-head"><div><h3>Rainfall vs Yield Relationship</h3><p>Filtered scatter.</p></div></div>
+              <div class="chart-body"><canvas id="chart-regional-rainfall"></canvas></div>
+            </div>
+          </div>
+
+          <div class="card span-2">
+            <div class="card-head">
+              <h3><i data-lucide="table"></i> Filtered Records</h3>
+              <span class="pill" id="ra-record-count">0 records</span>
+            </div>
+            <div class="table-wrap">
+              <table class="data-table" id="regional-table">
+                <thead>
+                  <tr><th>Crop</th><th>State</th><th>Season</th><th>Year</th><th>Area (ha)</th><th>Yield (t/ha)</th><th>Source</th></tr>
+                </thead>
+                <tbody id="regional-table-body">
+                  <tr class="empty-row"><td colspan="7">Apply filters to view records.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- ============================================================
+             HISTORY
+             ============================================================ -->
+        <section class="page-section" id="section-history" aria-label="Prediction History">
+          <div class="card filter-card">
+            <div class="form-row">
+              <label for="h-search">Search
+                <input type="search" id="h-search" placeholder="Crop or district…" />
+              </label>
+              <label for="h-season">Season
+                <select id="h-season">
+                  <option value="">All seasons</option>
+                  <option value="Kharif">Kharif</option>
+                  <option value="Rabi">Rabi</option>
+                  <option value="Zaid">Zaid</option>
+                  <option value="Perennial">Perennial</option>
+                </select>
+              </label>
+              <label for="h-sort">Sort by
+                <select id="h-sort">
+                  <option value="date-desc">Newest first</option>
+                  <option value="date-asc">Oldest first</option>
+                  <option value="yield-desc">Highest yield</option>
+                  <option value="yield-asc">Lowest yield</option>
+                </select>
+              </label>
+              <div class="filter-actions">
+                <button class="btn btn-secondary" id="btn-history-csv"><i data-lucide="download"></i> Export CSV</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="card span-2">
+            <div class="card-head">
+              <h3><i data-lucide="history"></i> Prediction Records</h3>
+              <span class="pill" id="h-count">0 records</span>
+            </div>
+            <div class="table-wrap">
+              <table class="data-table" id="history-table">
+                <thead>
+                  <tr><th>Crop</th><th>State</th><th>District</th><th>Season</th><th>Yield (t/ha)</th><th>Production (t)</th><th>Source</th><th>Saved</th><th>Actions</th></tr>
+                </thead>
+                <tbody id="history-body">
+                  <tr class="empty-row"><td colspan="9">Loading…</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Detail modal -->
+          <div class="modal" id="history-modal" aria-hidden="true" role="dialog" aria-modal="true">
+            <div class="modal-card">
+              <div class="modal-head">
+                <h3><i data-lucide="file-text"></i> Prediction Details</h3>
+                <button class="icon-btn" id="modal-close" aria-label="Close"><i data-lucide="x"></i></button>
+              </div>
+              <div class="modal-body" id="modal-body">—</div>
+              <div class="modal-foot">
+                <button class="btn btn-danger" id="modal-delete"><i data-lucide="trash-2"></i> Delete</button>
+                <button class="btn btn-ghost" id="modal-cancel">Close</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ============================================================
+             RECOMMENDATIONS
+             ============================================================ -->
+        <section class="page-section" id="section-recommendations" aria-label="Agricultural Recommendations">
+          <div class="banner info">
+            <i data-lucide="lightbulb"></i>
+            <span>These are <strong>rule-based, advisory suggestions</strong> derived from the input values. They never prescribe specific fertilizer dosages, pesticides, or guaranteed yield improvements.</span>
+          </div>
+
+          <div class="card">
+            <div class="card-head">
+              <h3><i data-lucide="sliders"></i> Generate Recommendations From Inputs</h3>
+            </div>
+            <div class="form-row">
+              <label for="rec-crop">Crop
+                <select id="rec-crop"><option value="">Select crop…</option></select>
+              </label>
+              <label for="rec-ph">Soil pH
+                <input type="number" id="rec-ph" min="0" max="14" step="0.1" value="6.5" />
+              </label>
+              <label for="rec-rainfall">Rainfall (mm)
+                <input type="number" id="rec-rainfall" min="0" max="5000" value="1100" />
+              </label>
+              <label for="rec-temp">Temperature (°C)
+                <input type="number" id="rec-temp" min="-10" max="55" value="27" />
+              </label>
+              <label for="rec-irrigation">Irrigation
+                <select id="rec-irrigation">
+                  <option value="Rainfed">Rainfed</option>
+                  <option value="Drip">Drip</option>
+                  <option value="Sprinkler">Sprinkler</option>
+                  <option value="Flood">Flood / Canal</option>
+                  <option value="Furrow">Furrow</option>
+                </select>
+              </label>
+              <div class="filter-actions">
+                <button class="btn btn-primary" id="btn-gen-recs"><i data-lucide="sparkles"></i> Generate</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="card span-2">
+            <div class="card-head">
+              <h3><i data-lucide="check-square"></i> Generated Recommendations</h3>
+            </div>
+            <ul class="recommend-list big" id="rec-list">
+              <li>Click <strong>Generate</strong> above to produce rule-based recommendations for your inputs.</li>
+            </ul>
+          </div>
+        </section>
+
+        <!-- ============================================================
+             ABOUT
+             ============================================================ -->
+        <section class="page-section" id="section-about" aria-label="About Project">
+          <div class="card span-2">
+            <div class="card-head"><h3><i data-lucide="info"></i> Project Objective</h3></div>
+            <p>The <strong>Intelligent Crop Yield Forecasting and Agricultural Decision Support System</strong> is an academic AIML project that demonstrates how historical agricultural data, environmental sensors, and explainable analytics can be combined to help farmers, extension officers, and policymakers reason about expected crop yield.</p>
+            <p>The front-end dashboard you are using lets a user enter field conditions, receive an estimated yield, explore scenario simulations, inspect the influence of environmental factors, compare ML models conceptually, and persist their predictions to a cloud database for later review.</p>
+          </div>
+
+          <div class="card span-2">
+            <div class="card-head"><h3><i data-lucide="git-branch"></i> Methodology Pipeline</h3></div>
+            <ol class="pipeline">
+              <li><span class="pipe-num">1</span><div><strong>Historical Agricultural Data</div></strong><p>Crop, season, state, area, production, fertilizer, pesticide and yield records are collected — in this demo, 19,689 records spanning 1997–2020 across 30 Indian states.</p></li>
+              <li><span class="pipe-num">2</span><div><strong>Data Preprocessing</div></strong><p>Outlier filtering, missing value handling, crop-name normalisation, and aggregation per (crop, state, season) tuple.</p></li>
+              <li><span class="pipe-num">3</span><div><strong>Model Training</div></strong><p>Regressors such as Linear Regression, Random Forest, Gradient Boosting, and XGBoost are trained on the prepared feature set.</p></li>
+              <li><span class="pipe-num">4</span><div><strong>Model Evaluation</div></strong><p>Models are compared using MAE, RMSE and R². <em>These metrics are intentionally shown as unavailable here because no trained backend is connected to this demo.</em></p></li>
+              <li><span class="pipe-num">5</span><div><strong>Yield Forecasting</div></strong><p>Trained models predict yield for new inputs. In this front-end demo a transparent deterministic estimator grounded in historical averages is used and clearly labelled.</p></li>
+              <li><span class="pipe-num">6</span><div><strong>Explainable AI</div></strong><p>Feature importance / SHAP analysis explains which inputs drove a prediction. The demo here shows illustrative heuristic influences instead.</p></li>
+              <li><span class="pipe-num">7</span><div><strong>Agricultural Decision Support</div></strong><p>Recommendations on soil testing, irrigation, drainage and extension outreach are generated from rule-based heuristics.</p></li>
+            </ol>
+          </div>
+
+          <div class="card span-2">
+            <div class="card-head"><h3><i data-lucide="book-open"></i> Core Concepts & Algorithms</h3></div>
+            <ul class="concept-list">
+              <li><strong>Supervised regression</strong> — predicting a continuous target (yield in tonnes/ha) from structured inputs.</li>
+              <li><strong>Ensemble learning</strong> — combining multiple models (Random Forest, Gradient Boosting) to reduce variance and bias.</li>
+              <li><strong>Feature engineering</strong> — deriving environmental factors (pH suitability, rainfall saturation) from raw inputs.</li>
+              <li><strong>Explainability</strong> — surfacing the contribution of each feature to a prediction, in this demo via illustrative heuristics.</li>
+              <li><strong>Evaluation metrics</strong> — MAE, RMSE and R² to quantify predictive accuracy.</li>
+            </ul>
+          </div>
+
+          <div class="card span-2">
+            <div class="card-head"><h3><i data-lucide="shield-alert"></i> Honest Limitations</h3></div>
+            <p>This front-end demo does not perform genuine machine learning inference. The “Demo Estimate” badge on every result makes this explicit. Genuine ML predictions require an appropriate historical dataset, trained models, and a backend that exposes them — none of which are bundled with this static website.</p>
+            <p>No fake accuracy scores or evaluation metrics are displayed. The model comparison table shows <em>“Evaluation unavailable — trained models not connected”</em> until real evaluation results are supplied.</p>
+          </div>
+        </section>
+
+      </div><!-- /.section-container -->
+
+      <footer class="main-footer">
+        <span>© <span id="footer-year">2026</span> Intelligent Crop Yield · AIML Project Demo</span>
+        <span class="footer-meta">Built with HTML · CSS · Vanilla JS · Chart.js · Node.js Express backend</span>
+      </footer>
+    </main>
+  </div>
+
+  <!-- Backend API client + App scripts -->
+  <script src="firebase.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
